@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Impel – Zapytanie ofertowe</title>
+  <title>Zapytanie ofertowe</title>
   <style>
     body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; }
     .container { max-width:560px; margin:40px auto; background:#fff;
@@ -142,7 +142,7 @@ var lastName  = lastSpace > 0 ? full.substring(lastSpace + 1) : full;
 
 var data = new FormData();
 data.append('oid', CONFIG.SF.OID);
-data.append('retURL', 'https://twojlogin.github.io');  // wymagane przez servlet; my i tak nie podążamy za redirectem
+data.append('retURL', 'katarzynafurtak.github.io');  // wymagane przez servlet; my i tak nie podążamy za redirectem
 data.append('first_name', firstName);
 data.append('last_name', lastName);
 data.append('company', document.getElementById('company').value.trim());
