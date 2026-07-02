@@ -70,27 +70,31 @@
   <script>
     // ================== KONFIGURACJA INTEGRACJI ==================
     var CONFIG = {
-      // >>> TODO: testowo URL z webhook.site; docelowo:
-      // https://webhooks.creatio.com/webhooks/TWOJ_API_KEY
-      WEBHOOK_URL: 'https://webhook.site/37a05b7a-d6c7-4b35-9de3-d633ce0bd320',
+  PLATFORM: 'salesforce',   // 'creatio' | 'salesforce' – przełącznik na przyszłość
 
-      // >>> TODO: podmień GUID-y na Id z katalogu Products w Creatio
-      SERVICES: [
-        { id: 'TODO-GUID-SPRZATANIE', name: 'Sprzątanie i utrzymanie czystości' },
-        { id: 'TODO-GUID-OCHRONA',    name: 'Ochrona fizyczna' },
-        { id: 'TODO-GUID-MONITORING', name: 'Monitoring i systemy bezpieczeństwa' },
-        { id: 'TODO-GUID-ODZIEZ',     name: 'Wynajem i serwis odzieży roboczej' }
-      ],
+  SF: {
+    ENDPOINT: 'https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8&orgId=00DgK00000SOSsf',
+    OID: '00DgK00000SOSsf',
+    FIELD_NIP: '00NgK00004IEvus',        // name pola NIP__c z generatora
+    FIELD_CODES: '00NgK00004IDemo',      // name pola Product_Codes__c
+  },
 
-      // >>> TODO: podmień GUID-y na Id z lookupu Industry w Creatio
-      INDUSTRIES: [
-        { id: 'TODO-GUID-PRZEMYSL',  name: 'Przemysł i produkcja' },
-        { id: 'TODO-GUID-LOGISTYKA', name: 'Logistyka i magazyny' },
-        { id: 'TODO-GUID-BIURA',     name: 'Biura i nieruchomości komercyjne' },
-        { id: 'TODO-GUID-ZDROWIE',   name: 'Ochrona zdrowia' },
-        { id: 'TODO-GUID-HANDEL',    name: 'Handel detaliczny' },
-        { id: 'TODO-GUID-PUBLICZNY', name: 'Sektor publiczny' }
-      ]
+  SERVICES: [
+    { id: 'IMPEL-CLEAN', name: 'Sprzątanie i utrzymanie czystości' },
+    { id: 'IMPEL-SEC',   name: 'Ochrona fizyczna' },
+    { id: 'IMPEL-MON',   name: 'Monitoring i systemy bezpieczeństwa' },
+    { id: 'IMPEL-WEAR',  name: 'Wynajem i serwis odzieży roboczej' }
+  ],
+
+  INDUSTRIES: [
+    { id: 'Przemysł i produkcja',              name: 'Przemysł i produkcja' },
+    { id: 'Logistyka i magazyny',              name: 'Logistyka i magazyny' },
+    { id: 'Biura i nieruchomości komercyjne',  name: 'Biura i nieruchomości komercyjne' },
+    { id: 'Ochrona zdrowia',                   name: 'Ochrona zdrowia' },
+    { id: 'Handel detaliczny',                 name: 'Handel detaliczny' },
+    { id: 'Sektor publiczny',                  name: 'Sektor publiczny' }
+  ]
+};
     };
     // =============================================================
 
@@ -131,23 +135,28 @@
       if (!isValidNip(nip) || !checked.length) return;
 
       // payload w formacie webhooków Creatio: kody kolumn + EntityName
-      var data = new FormData();
-      data.append('EntityName', 'Lead');
-      data.append('Contact', document.getElementById('fullname').value.trim());
-      data.append('Account', document.getElementById('company').value.trim());
-      data.append('Email', document.getElementById('email').value.trim());
-      data.append('MobilePhone', document.getElementById('phone').value.trim());
-      data.append('UsrNIP', nip);
-      data.append('UsrProductId', checked[0]);           // Usługa główna (lookup)
-      data.append('UsrProductCodes', checked.join(';')); // pełna lista dla procesu BPM
-      data.append('IndustryId', document.getElementById('industry').value);
-      data.append('Commentary', document.getElementById('details').value.trim());
-      // Załącznik celowo NIE jest wysyłany – webhooki Creatio nie przyjmują plików (faza 2)
+      // split "Imię Nazwisko" -> first/last (SF wymaga rozdzielnie)
+var full = document.getElementById('fullname').value.trim();
+var lastSpace = full.lastIndexOf(' ');
+var firstName = lastSpace > 0 ? full.substring(0, lastSpace) : '';
+var lastName  = lastSpace > 0 ? full.substring(lastSpace + 1) : full;
 
-      var btn = document.getElementById('submit-btn');
-      btn.disabled = true; btn.textContent = 'Wysyłanie...';
-
-      fetch(CONFIG.WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: data })
+var data = new FormData();
+data.append('oid', CONFIG.SF.OID);
+data.append('retURL', 'https://twojlogin.github.io');  // wymagane przez servlet; my i tak nie podążamy za redirectem
+data.append('first_name', firstName);
+data.append('last_name', lastName);
+data.append('company', document.getElementById('company').value.trim());
+data.append('email', document.getElementById('email').value.trim());
+data.append('phone', document.getElementById('phone').value.trim());
+data.append('industry', document.getElementById('industry').value);
+data.append('description', document.getElementById('details').value.trim());
+data.append('lead_source', 'Web');
+data.append(CONFIG.SF.FIELD_NIP, nip);
+data.append(CONFIG.SF.FIELD_CODES, checked.join(';'));
+data.append(CONFIG.SF.FIELD_MAIN, checked[0]);
+      
+fetch(CONFIG.SF.ENDPOINT, { method: 'POST', mode: 'no-cors', body: data })
         .finally(function () {
           document.getElementById('page').innerHTML =
             '<h1>Dziękujemy!</h1><p>Twoje zapytanie zostało przesłane. ' +
