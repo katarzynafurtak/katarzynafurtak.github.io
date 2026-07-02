@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impel – Zapytanie ofertowe</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; }
+    .container { max-width:560px; margin:40px auto; background:#fff;
+                 padding:32px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+    h1 { color:#1a3c6e; font-size:24px; }
+    label { display:block; margin-top:16px; font-weight:bold; font-size:14px; }
+    .checkbox-group label { font-weight:normal; margin-top:8px; }
+    .checkbox-group input { width:auto; margin-right:8px; }
+    input, select, textarea { width:100%; padding:10px; margin-top:6px;
+                 border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
+    button { margin-top:24px; width:100%; padding:12px; background:#1a3c6e;
+             color:#fff; border:none; border-radius:4px; font-size:16px; cursor:pointer; }
+    button:disabled { background:#9aa7b8; }
+    .req { color:#c00; }
+    .hint { font-size:12px; color:#666; font-weight:normal; }
+    .error { color:#c00; font-size:13px; margin-top:6px; display:none; }
+    .hp { position:absolute; left:-9999px; }  /* honeypot antyspamowy */
+  </style>
+</head>
+<body>
+  <div class="container" id="page">
+    <h1>Zapytanie ofertowe</h1>
+    <p>Wypełnij formularz, a nasz doradca skontaktuje się z Tobą.</p>
+
+    <form id="inquiry-form" novalidate>
+      <label>Firma / organizacja <span class="req">*</span></label>
+      <input type="text" id="company" required>
+
+      <label>Imię i nazwisko <span class="req">*</span></label>
+      <input type="text" id="fullname" required>
+
+      <label>E-mail <span class="req">*</span></label>
+      <input type="email" id="email" required>
+
+      <label>Telefon <span class="req">*</span></label>
+      <input type="tel" id="phone" required>
+
+      <label>NIP <span class="req">*</span> <span class="hint">(10 cyfr, bez kresek)</span></label>
+      <input type="text" id="nip" required maxlength="10">
+      <div class="error" id="nip-error">Nieprawidłowy NIP – sprawdź cyfry.</div>
+
+      <label>Usługi <span class="req">*</span> <span class="hint">(możesz wybrać kilka)</span></label>
+      <div class="checkbox-group" id="services"></div>
+      <div class="error" id="services-error">Wybierz co najmniej jedną usługę.</div>
+
+      <label>Branża <span class="req">*</span></label>
+      <select id="industry" required>
+        <option value="">– wybierz –</option>
+      </select>
+
+      <label>Szczegóły zapytania</label>
+      <textarea id="details" rows="4"></textarea>
+
+      <label>Załącznik <span class="hint">(opcjonalnie, np. specyfikacja – PDF/DOCX)</span></label>
+      <input type="file" id="attachment" accept=".pdf,.doc,.docx">
+
+      <!-- honeypot: pole niewidoczne dla ludzi; boty je wypełnią -->
+      <input type="text" id="website" class="hp" tabindex="-1" autocomplete="off">
+
+      <button type="submit" id="submit-btn">Wyślij zapytanie</button>
+    </form>
+  </div>
+
+  <script>
+    // ================== KONFIGURACJA INTEGRACJI ==================
+    var CONFIG = {
+      // >>> TODO: testowo URL z webhook.site; docelowo:
+      // https://webhooks.creatio.com/webhooks/TWOJ_API_KEY
+      WEBHOOK_URL: 'https://webhook.site/37a05b7a-d6c7-4b35-9de3-d633ce0bd320',
+
+      // >>> TODO: podmień GUID-y na Id z katalogu Products w Creatio
+      SERVICES: [
+        { id: 'TODO-GUID-SPRZATANIE', name: 'Sprzątanie i utrzymanie czystości' },
+        { id: 'TODO-GUID-OCHRONA',    name: 'Ochrona fizyczna' },
+        { id: 'TODO-GUID-MONITORING', name: 'Monitoring i systemy bezpieczeństwa' },
+        { id: 'TODO-GUID-ODZIEZ',     name: 'Wynajem i serwis odzieży roboczej' }
+      ],
+
+      // >>> TODO: podmień GUID-y na Id z lookupu Industry w Creatio
+      INDUSTRIES: [
+        { id: 'TODO-GUID-PRZEMYSL',  name: 'Przemysł i produkcja' },
+        { id: 'TODO-GUID-LOGISTYKA', name: 'Logistyka i magazyny' },
+        { id: 'TODO-GUID-BIURA',     name: 'Biura i nieruchomości komercyjne' },
+        { id: 'TODO-GUID-ZDROWIE',   name: 'Ochrona zdrowia' },
+        { id: 'TODO-GUID-HANDEL',    name: 'Handel detaliczny' },
+        { id: 'TODO-GUID-PUBLICZNY', name: 'Sektor publiczny' }
+      ]
+    };
+    // =============================================================
+
+    // Render opcji z konfiguracji (jedno źródło prawdy w tym pliku)
+    CONFIG.SERVICES.forEach(function (s) {
+      document.getElementById('services').insertAdjacentHTML('beforeend',
+        '<label><input type="checkbox" value="' + s.id + '"> ' + s.name + '</label>');
+    });
+    CONFIG.INDUSTRIES.forEach(function (i) {
+      document.getElementById('industry').insertAdjacentHTML('beforeend',
+        '<option value="' + i.id + '">' + i.name + '</option>');
+    });
+
+    // Walidacja sumy kontrolnej NIP
+    function isValidNip(nip) {
+      if (!/^\d{10}$/.test(nip)) return false;
+      var w = [6, 5, 7, 2, 3, 4, 5, 6, 7], sum = 0;
+      for (var i = 0; i < 9; i++) sum += parseInt(nip[i], 10) * w[i];
+      return sum % 11 === parseInt(nip[9], 10);
+    }
+
+    document.getElementById('inquiry-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // honeypot – bot wypełnił ukryte pole: udajemy sukces, nic nie wysyłamy
+      if (document.getElementById('website').value) return;
+
+      var form = e.target;
+      var nip = document.getElementById('nip').value.trim();
+      var checked = Array.from(
+        document.querySelectorAll('#services input:checked')
+      ).map(function (cb) { return cb.value; });
+
+      // walidacje
+      document.getElementById('nip-error').style.display = isValidNip(nip) ? 'none' : 'block';
+      document.getElementById('services-error').style.display = checked.length ? 'none' : 'block';
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      if (!isValidNip(nip) || !checked.length) return;
+
+      // payload w formacie webhooków Creatio: kody kolumn + EntityName
+      var data = new FormData();
+      data.append('EntityName', 'Lead');
+      data.append('Contact', document.getElementById('fullname').value.trim());
+      data.append('Account', document.getElementById('company').value.trim());
+      data.append('Email', document.getElementById('email').value.trim());
+      data.append('MobilePhone', document.getElementById('phone').value.trim());
+      data.append('UsrNIP', nip);
+      data.append('UsrProductId', checked[0]);           // Usługa główna (lookup)
+      data.append('UsrProductCodes', checked.join(';')); // pełna lista dla procesu BPM
+      data.append('IndustryId', document.getElementById('industry').value);
+      data.append('Commentary', document.getElementById('details').value.trim());
+      // Załącznik celowo NIE jest wysyłany – webhooki Creatio nie przyjmują plików (faza 2)
+
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = 'Wysyłanie...';
+
+      fetch(CONFIG.WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: data })
+        .finally(function () {
+          document.getElementById('page').innerHTML =
+            '<h1>Dziękujemy!</h1><p>Twoje zapytanie zostało przesłane. ' +
+            'Doradca Impel skontaktuje się z Tobą w ciągu 1 dnia roboczego.</p>';
+        });
+    });
+  </script>
+</body>
+</html>
