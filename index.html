@@ -155,12 +155,16 @@ data.append('lead_source', 'Web');
 data.append(CONFIG.SF.FIELD_NIP, nip);
 data.append(CONFIG.SF.FIELD_CODES, checked.join(';'));
 data.append(CONFIG.SF.FIELD_MAIN, checked[0]);
+
+ DIAGNOSTYKA (tylko na czas testów – potem usuń!):
+ data.append('debug', '1');
+ data.append('debugEmail', 'katarzyna.furtak7@gmail.com');
       
 fetch(CONFIG.SF.ENDPOINT, { method: 'POST', mode: 'no-cors', body: data })
         .finally(function () {
           document.getElementById('page').innerHTML =
             '<h1>Dziękujemy!</h1><p>Twoje zapytanie zostało przesłane. ' +
-            'Doradca Impel skontaktuje się z Tobą w ciągu 1 dnia roboczego.</p>';
+            'Doradca skontaktuje się z Tobą w ciągu 1 dnia roboczego.</p>';
         });
     });
   </script>
