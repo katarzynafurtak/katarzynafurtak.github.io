@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3 Zapytanie ofertowe</title>
+  <title>Zapytanie ofertowe</title>
   <style>
     body { font-family: Arial, sans-serif; background:#f4f6f8; margin:0; }
     .container { max-width:560px; margin:40px auto; background:#fff;
@@ -16,24 +16,26 @@
                  border:1px solid #ccc; border-radius:4px; box-sizing:border-box; }
     button { margin-top:24px; width:100%; padding:12px; background:#1a3c6e;
              color:#fff; border:none; border-radius:4px; font-size:16px; cursor:pointer; }
-    button:disabled { background:#9aa7b8; }
     .req { color:#c00; }
     .hint { font-size:12px; color:#666; font-weight:normal; }
     .error { color:#c00; font-size:13px; margin-top:6px; display:none; }
-    .hp { position:absolute; left:-9999px; }  /* honeypot antyspamowy */
+    .hp { position:absolute; left:-9999px; }
   </style>
 </head>
 <body>
   <div class="container" id="page">
-    <h1>3 Zapytanie ofertowe</h1>
+    <h1>Zapytanie ofertowe</h1>
     <p>Wypełnij formularz, a nasz doradca skontaktuje się z Tobą.</p>
 
     <form id="inquiry-form" novalidate>
       <label>Firma / organizacja <span class="req">*</span></label>
       <input type="text" id="company" required>
 
-      <label>Imię i nazwisko <span class="req">*</span></label>
-      <input type="text" id="fullname" required>
+      <label>Imię <span class="req">*</span></label>
+      <input type="text" id="first_name" required>
+
+      <label>Nazwisko <span class="req">*</span></label>
+      <input type="text" id="last_name" required>
 
       <label>E-mail <span class="req">*</span></label>
       <input type="email" id="email" required>
@@ -41,9 +43,8 @@
       <label>Telefon <span class="req">*</span></label>
       <input type="tel" id="phone" required>
 
-      <label>NIP <span class="req">*</span> <span class="hint">(10 cyfr, bez kresek)</span></label>
-      <input type="text" id="nip" required maxlength="10">
-      <div class="error" id="nip-error">Nieprawidłowy NIP – sprawdź cyfry.</div>
+      <label>NIP <span class="req">*</span> <span class="hint">(10 cyfr)</span></label>
+      <input type="text" id="nip" maxlength="10" required>
 
       <label>Usługi <span class="req">*</span> <span class="hint">(możesz wybrać kilka)</span></label>
       <div class="checkbox-group" id="services"></div>
@@ -57,11 +58,10 @@
       <label>Szczegóły zapytania</label>
       <textarea id="details" rows="4"></textarea>
 
-      <label>Załącznik <span class="hint">(opcjonalnie, np. specyfikacja – PDF/DOCX)</span></label>
+      <label>Załącznik <span class="hint">(opcjonalnie – uwaga: plik nie jest wysyłany)</span></label>
       <input type="file" id="attachment" accept=".pdf,.doc,.docx">
 
-      <!-- honeypot: pole niewidoczne dla ludzi; boty je wypełnią -->
-      <input type="text" id="website" class="hp" tabindex="-1" autocomplete="off">
+      <input type="text" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
       <button type="submit" id="submit-btn">Wyślij zapytanie</button>
     </form>
@@ -70,34 +70,31 @@
   <script>
     // ================== KONFIGURACJA INTEGRACJI ==================
     var CONFIG = {
-  PLATFORM: 'salesforce',   // 'creatio' | 'salesforce' – przełącznik na przyszłość
-
-  SF: {
-    ENDPOINT: 'https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8&orgId=00DgK00000SOSsf',
-    OID: '00DgK00000SOSsf',
-    FIELD_NIP: '00NgK00004IEvus',        // name pola NIP__c z generatora
-    FIELD_CODES: '00NgK00004IDemo',      // name pola Product_Codes__c
-  },
-
-  SERVICES: [
-    { id: 'IMPEL-CLEAN', name: 'Sprzątanie i utrzymanie czystości' },
-    { id: 'IMPEL-SEC',   name: 'Ochrona fizyczna' },
-    { id: 'IMPEL-MON',   name: 'Monitoring i systemy bezpieczeństwa' },
-    { id: 'IMPEL-WEAR',  name: 'Wynajem i serwis odzieży roboczej' }
-  ],
-
-  INDUSTRIES: [
-    { id: 'Przemysł i produkcja',              name: 'Przemysł i produkcja' },
-    { id: 'Logistyka i magazyny',              name: 'Logistyka i magazyny' },
-    { id: 'Biura i nieruchomości komercyjne',  name: 'Biura i nieruchomości komercyjne' },
-    { id: 'Ochrona zdrowia',                   name: 'Ochrona zdrowia' },
-    { id: 'Handel detaliczny',                 name: 'Handel detaliczny' },
-    { id: 'Sektor publiczny',                  name: 'Sektor publiczny' }
-  ]
-};
+      SF: {
+        ENDPOINT: 'https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8',
+        OID: '00DgK00000SOSsf',
+        FIELD_NIP: '00NgK00004IEvus',
+        FIELD_CODES: '00NgK00004IDemo'
+      },
+      SERVICES: [
+        { id: 'IMPEL-CLEAN', name: 'Sprzątanie i utrzymanie czystości' },
+        { id: 'IMPEL-SEC',   name: 'Ochrona fizyczna' },
+        { id: 'IMPEL-MON',   name: 'Monitoring i systemy bezpieczeństwa' },
+        { id: 'IMPEL-WEAR',  name: 'Wynajem i serwis odzieży roboczej' }
+      ],
+      INDUSTRIES: [
+        { id: 'Przemysł i produkcja',             name: 'Przemysł i produkcja' },
+        { id: 'Logistyka i magazyny',             name: 'Logistyka i magazyny' },
+        { id: 'Biura i nieruchomości komercyjne', name: 'Biura i nieruchomości komercyjne' },
+        { id: 'Ochrona zdrowia',                  name: 'Ochrona zdrowia' },
+        { id: 'Handel detaliczny',                name: 'Handel detaliczny' },
+        { id: 'Sektor publiczny',                 name: 'Sektor publiczny' }
+      ]
+    };
+    // >>> DEBUG: usuń te dwie linie po zakończeniu testów <
+    var DEBUG_EMAIL = 'rekoka7124@homephit.com';
     // =============================================================
 
-    // Render opcji z konfiguracji (jedno źródło prawdy w tym pliku)
     CONFIG.SERVICES.forEach(function (s) {
       document.getElementById('services').insertAdjacentHTML('beforeend',
         '<label><input type="checkbox" value="' + s.id + '"> ' + s.name + '</label>');
@@ -107,58 +104,44 @@
         '<option value="' + i.id + '">' + i.name + '</option>');
     });
 
-    // Walidacja sumy kontrolnej NIP
-    function isValidNip(nip) {
-      if (!/^\d{10}$/.test(nip)) return false;
-      var w = [6, 5, 7, 2, 3, 4, 5, 6, 7], sum = 0;
-      for (var i = 0; i < 9; i++) sum += parseInt(nip[i], 10) * w[i];
-      return sum % 11 === parseInt(nip[9], 10);
-    }
-
     document.getElementById('inquiry-form').addEventListener('submit', function (e) {
       e.preventDefault();
 
-      // honeypot – bot wypełnił ukryte pole: udajemy sukces, nic nie wysyłamy
+      // honeypot antyspamowy
       if (document.getElementById('website').value) return;
 
       var form = e.target;
-      var nip = document.getElementById('nip').value.trim();
       var checked = Array.from(
         document.querySelectorAll('#services input:checked')
       ).map(function (cb) { return cb.value; });
 
-      // walidacje
-      document.getElementById('nip-error').style.display = isValidNip(nip) ? 'none' : 'block';
       document.getElementById('services-error').style.display = checked.length ? 'none' : 'block';
       if (!form.checkValidity()) { form.reportValidity(); return; }
-      if (!isValidNip(nip) || !checked.length) return;
+      if (!checked.length) return;
 
-      // payload w formacie webhooków Creatio: kody kolumn + EntityName
-      // split "Imię Nazwisko" -> first/last (SF wymaga rozdzielnie)
-var full = document.getElementById('fullname').value.trim();
-var lastSpace = full.lastIndexOf(' ');
-var firstName = lastSpace > 0 ? full.substring(0, lastSpace) : '';
-var lastName  = lastSpace > 0 ? full.substring(lastSpace + 1) : full;
+      // KLUCZOWA ZMIANA: URLSearchParams (urlencoded), NIE FormData (multipart)
+      var data = new URLSearchParams();
+      data.append('oid', CONFIG.SF.OID);
+      data.append('retURL', 'https://katarzynafurtak.github.io/');
+      data.append('first_name', document.getElementById('first_name').value.trim());
+      data.append('last_name', document.getElementById('last_name').value.trim());
+      data.append('company', document.getElementById('company').value.trim());
+      data.append('email', document.getElementById('email').value.trim());
+      data.append('phone', document.getElementById('phone').value.trim());
+      data.append('industry', document.getElementById('industry').value);
+      data.append('description', document.getElementById('details').value.trim());
+      data.append('lead_source', 'Web');
+      data.append(CONFIG.SF.FIELD_NIP, document.getElementById('nip').value.trim());
+      data.append(CONFIG.SF.FIELD_CODES, checked.join(';'));
 
-var data = new FormData();
-data.append('oid', CONFIG.SF.OID);
-data.append('retURL', 'https://katarzynafurtak.github.io/');  // wymagane przez servlet; my i tak nie podążamy za redirectem
-data.append('first_name', firstName);
-data.append('last_name', lastName);
-data.append('company', document.getElementById('company').value.trim());
-data.append('email', document.getElementById('email').value.trim());
-data.append('phone', document.getElementById('phone').value.trim());
-data.append('industry', document.getElementById('industry').value);
-data.append('description', document.getElementById('details').value.trim());
-data.append('lead_source', 'Web');
-data.append(CONFIG.SF.FIELD_NIP, nip);
-data.append(CONFIG.SF.FIELD_CODES, checked.join(';'));
+      // >>> DEBUG: usuń te dwie linie po testach <
+      data.append('debug', '1');
+      data.append('debugEmail', DEBUG_EMAIL);
 
- //DIAGNOSTYKA (tylko na czas testów – potem usuń!):
- data.append('debug', '1');
- data.append('debugEmail', 'kasiaf@discardmail.my');
-      
-fetch(CONFIG.SF.ENDPOINT, { method: 'POST', mode: 'no-cors', body: data })
+      var btn = document.getElementById('submit-btn');
+      btn.disabled = true; btn.textContent = 'Wysyłanie...';
+
+      fetch(CONFIG.SF.ENDPOINT, { method: 'POST', mode: 'no-cors', body: data })
         .finally(function () {
           document.getElementById('page').innerHTML =
             '<h1>Dziękujemy!</h1><p>Twoje zapytanie zostało przesłane. ' +
